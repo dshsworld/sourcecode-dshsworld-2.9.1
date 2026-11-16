@@ -1,0 +1,1 @@
+ALTER TABLE `scenes` ADD `annotation` text DEFAULT '' NOT NULL;

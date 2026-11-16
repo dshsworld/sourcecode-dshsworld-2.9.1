@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788267492319,
+      "tag": "0000_past_ben_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789280707852,
+      "tag": "0001_reflective_orphan",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789280996810,
+      "tag": "0002_mysterious_starjammers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790352695562,
+      "tag": "0003_lazy_lionheart",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792481032566,
+      "tag": "0004_gray_talkback",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792484479448,
+      "tag": "0005_new_living_lightning",
+      "breakpoints": true
+    }
+  ]
+}
