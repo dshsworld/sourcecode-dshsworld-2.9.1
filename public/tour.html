@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ko" data-theme="purple">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#100b1e">
+  <meta name="description" content="대구과학고등학교 오픈소스 360° 가상투어 DSHS WORLD">
+  <title>DSHS WORLD · Project SOLGAE</title>
+  <link rel="preload" href="/assets/fonts/roboto-black-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css?v=2.9.1">
+  <link rel="icon" href="/assets/mark.svg?v=2" type="image/svg+xml">
+</head>
+<body>
+  <main id="app" class="app">
+    <canvas id="pano-canvas" class="pano-canvas" tabindex="0" aria-label="360도 파노라마. 드래그하거나 방향키로 둘러보세요."></canvas>
+    <div id="hotspot-layer" class="hotspot-layer" aria-live="polite"></div>
+    <div id="cursor-arrow" class="cursor-arrow" hidden aria-hidden="true"><span class="cursor-arrow-icon"><i></i></span><span class="cursor-arrow-hint">한 번 더 터치하여 이동</span></div>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <button id="brand-button" class="brand" type="button" aria-label="DSHS WORLD 소개">
+        <span class="brand-copy">
+          <strong>DSHS WORLD</strong>
+          <small>Project SOLGAE</small>
+        </span>
+      </button>
+      <div class="top-actions">
+        <button class="creators-button" type="button" data-open-creators>THE CREATORS</button>
+        <button id="fullscreen-button" class="icon-button" type="button" aria-label="전체 화면" title="전체 화면">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+        </button>
+        <button id="admin-button" class="admin-button" type="button">ADMIN</button>
+      </div>
+    </header>
+
+    <aside id="annotation-panel" class="annotation-panel" aria-labelledby="annotation-heading">
+      <div class="annotation-header"><h2 id="annotation-heading">CREATOR'S ANNOTATION</h2><button id="annotation-toggle" type="button" aria-expanded="true" aria-controls="annotation-body">주석 숨기기</button></div>
+      <div id="annotation-body">
+        <p id="annotation-location" class="annotation-location"></p>
+        <p id="annotation-text" class="annotation-text"></p>
+        <form id="annotation-form" hidden><label for="annotation-input">이 노드의 주석</label><textarea id="annotation-input" maxlength="5000" rows="5"></textarea><div class="annotation-actions"><button id="annotation-cancel" class="secondary-button" type="button">취소</button><button class="primary-button" type="submit">저장</button></div></form>
+        <button id="annotation-edit" class="secondary-button" type="button" hidden>주석 작성 / 수정</button>
+        <p id="annotation-status" role="status"></p>
+      </div>
+    </aside>
+    <div class="viewer-tools" aria-label="보기 도구">
+      <div class="tour-menu-wrap">
+        <button id="tour-menu-button" class="tool-button" type="button" aria-label="메뉴" aria-expanded="false" aria-controls="tour-menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <nav id="tour-menu" class="tour-menu" aria-label="사이트 정보" hidden>
+          <button type="button" data-info-dialog="greeting-dialog">인사말</button>
+          <button type="button" data-info-dialog="site-info-dialog">버전 / 방문자 수</button>
+        </nav>
+      </div>
+      <button id="music-toggle" class="tool-button music-toggle" type="button" aria-label="배경음악 켜기" aria-pressed="false" title="배경음악 켜기">♫</button>
+      <button id="zoom-in" class="tool-button" type="button" aria-label="확대">+</button>
+      <button id="zoom-out" class="tool-button" type="button" aria-label="축소">−</button>
+      <button id="reset-view" class="tool-button" type="button" aria-label="시선 초기화">↺</button>
+    </div>
+
+    <div id="elevator-panel" class="elevator-panel" hidden>
+      <div class="elevator-display"><span>DSHS</span><strong id="elevator-display-floor">—</strong></div>
+      <p id="elevator-status">이동할 층을 선택하세요</p>
+      <div id="elevator-buttons" class="elevator-buttons"></div>
+      <button id="elevator-exit" class="primary-button" type="button" hidden>문 열고 나가기</button>
+    </div>
+
+    <div id="admin-dock" class="admin-dock" hidden>
+      <div class="admin-status"><span class="live-dot"></span><strong>EDIT MODE</strong><span id="aim-readout">YAW 0° · PITCH 0°</span></div>
+      <div class="admin-actions">
+        <button type="button" data-admin-action="upload">사진 추가</button>
+        <button type="button" data-admin-action="connect">노드 연결</button>
+        <button id="arrow-edit-button" type="button" data-admin-action="arrows">화살표 수정</button>
+        <button type="button" data-admin-action="graph">노드 맵</button>
+        <button type="button" data-admin-action="edit">현재 노드</button>
+        <button type="button" data-admin-action="links">연결 관리</button>
+        <button type="button" data-admin-action="logout" class="danger-text">종료</button>
+      </div>
+    </div>
+    <section id="arrow-editor" class="arrow-editor" hidden aria-label="화살표 위치 수정">
+      <div class="arrow-editor-heading"><strong>화살표 수정</strong><span>위치 클릭 시 자동 저장</span></div>
+      <label for="arrow-edit-target">이동할 목적지</label>
+      <select id="arrow-edit-target"><option value="">옮길 화살표 선택</option></select>
+      <p id="arrow-edit-status" role="status" aria-live="polite"></p>
+      <div class="arrow-editor-actions"><button id="arrow-edit-clear" type="button">선택 취소</button><button id="arrow-edit-done" type="button">수정 종료</button></div>
+    </section>
+    <div id="aim-crosshair" class="aim-crosshair" hidden aria-hidden="true"><span></span></div>
+
+    <div id="loading" class="loading" role="status"><span></span><p>공간을 불러오는 중</p></div>
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+    <audio id="background-music" loop preload="none">
+      <source src="https://gongu.copyright.or.kr/gongu/wrt/cmmn/wrtFileMediaPlay.do?wrtSn=13073706&amp;fileSn=1" type="audio/mpeg">
+    </audio>
+  </main>
+
+  <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+    <audio id="intro-sound" preload="none" src="/assets/solgae-intro.mp3?v=2.9.1"></audio>
+    <canvas id="opening-canvas" class="opening-canvas" aria-hidden="true"></canvas>
+    <div class="opening-aura" aria-hidden="true"></div>
+    <svg class="opening-emblem" viewBox="0 0 600 260" fill="none" aria-hidden="true">
+      <path class="opening-wing opening-wing-left" pathLength="1" d="M299 124C271 91 235 62 191 48C137 31 80 32 24 15C51 48 88 78 126 96L91 90C127 122 168 141 213 143L191 126C228 138 260 139 289 145Z"/>
+      <path class="opening-wing opening-wing-right" pathLength="1" d="M301 124C329 91 365 62 409 48C463 31 520 32 576 15C549 48 512 78 474 96L509 90C473 122 432 141 387 143L409 126C372 138 340 139 311 145Z"/>
+      <path class="opening-tail" pathLength="1" d="M289 137C289 118 292 104 300 95C308 104 311 118 311 137L323 214L300 193L277 214Z"/>
+    </svg>
+    <div class="welcome-center">
+      <h1 id="welcome-title">DSHS WORLD</h1>
+      <span class="welcome-rule" aria-hidden="true"></span>
+      <div class="welcome-action-slot">
+        <span id="welcome-loader" class="welcome-loader" aria-label="투어를 불러오는 중"></span>
+        <button id="enter-button" class="welcome-start" type="button" hidden>
+          <span>시작하기</span>
+          <span class="welcome-start-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+      <p id="welcome-error" class="welcome-error" role="status" hidden></p>
+    </div>
+    <button class="creators-button welcome-creators" type="button" data-open-creators>THE CREATORS</button>
+  </section>
+
+  <dialog id="about-dialog" class="modal about-modal">
+    <form method="dialog"><button class="modal-x" value="close" aria-label="닫기">×</button></form>
+    <span class="eyebrow">ABOUT THE PROJECT</span>
+    <h2>DSHS WORLD</h2>
+    <p class="modal-lead">대구과학고등학교의 공간을 둘러볼 수 있는 오픈소스 360° 가상투어입니다.</p>
+    <dl class="about-list">
+      <div><dt>방식</dt><dd>정지 파노라마 노드</dd></div>
+      <div><dt>이동</dt><dd>바닥 화살표 · 엘리베이터</dd></div>
+      <div><dt>촬영 도구</dt><dd>Insta360 X6</dd></div>
+      <div><dt>크리에이터</dt><dd><button class="creators-button" type="button" data-open-creators>THE CREATORS</button></dd></div>
+    </dl>
+    <p class="music-credit">배경음악 <a href="https://gongu.copyright.or.kr/gongu/wrt/wrt/view.do?menuNo=200020&amp;wrtSn=13073706" target="_blank" rel="noreferrer">Fly With Me · 김성원 · 공유마당</a> · 기증저작물 자유이용</p>
+  </dialog>
+
+  <dialog id="creators-dialog" class="modal creators-modal" aria-labelledby="creators-title">
+    <form method="dialog"><button class="modal-x" value="close" aria-label="닫기">×</button></form>
+    <span class="eyebrow">MADE BY STATIC</span>
+    <h2 id="creators-title">THE CREATORS</h2>
+    <div class="creators-tabs" role="tablist" aria-label="크리에이터 기수">
+      <button id="creators-tab-1" type="button" role="tab" data-creator-tab="1" aria-controls="creators-generation-1" aria-selected="true"><strong>1기</strong><small>v1.1.0 – v3.1.0</small></button>
+      <button id="creators-tab-2" type="button" role="tab" data-creator-tab="2" aria-controls="creators-generation-2" aria-selected="false" tabindex="-1"><strong>2기</strong></button>
+    </div>
+    <div id="creators-generation-1" role="tabpanel" aria-labelledby="creators-tab-1">
+      <ul class="creators-list">
+        <li class="creator-lead"><strong>38기 김동현</strong><span class="creator-role">총괄 책임</span></li>
+        <li>38기 구성현</li>
+        <li>38기 김예슬</li>
+        <li>38기 엄지우</li>
+        <li>39기 강도겸</li>
+        <li>39기 오주원</li>
+      </ul>
+    </div>
+    <div id="creators-generation-2" role="tabpanel" aria-labelledby="creators-tab-2" hidden>
+      <p class="creators-recruit">4n기 크리에이터 모집합니다 :)</p>
+    </div>
+  </dialog>
+
+  <dialog id="greeting-dialog" class="modal greeting-modal" aria-labelledby="greeting-title">
+    <form method="dialog"><button class="modal-x" value="close" aria-label="닫기">×</button></form>
+    <span class="eyebrow">DSHS WORLD</span>
+    <h2 id="greeting-title">인사말</h2>
+    <div class="greeting-letter">
+      <p>안녕하세요!<br>DSHS WORLD 프로젝트를 총괄한 38기 김동현입니다.</p>
+      <p>처음 학교에 입학했을 때, 쉬는 시간마다 다음 강의실을 찾아 헤매던 기억이 있습니다. 이동 수업이 많은 학기 초에는 학교 구조가 낯설어 어디로 가야 할지 몰라 당황하곤 했습니다. 후배들은 이런 어려움을 조금 덜 겪었으면 하는 마음에서 이 프로젝트를 시작했습니다. 입학을 앞두고 학교의 모습이 궁금한 친구들에게도 도움이 되고 싶었습니다.</p>
+      <p>저는 평소 가보고 싶은 여행지를 구글맵 로드뷰로 둘러보는 것을 좋아합니다. 화면 속 길을 따라가다 보면 아직 가보지 않은 곳도 조금은 익숙하게 느껴집니다. 우리 학교도 이렇게 둘러볼 수 있다면 좋겠다는 생각이 DSHS WORLD의 출발점이 되었습니다. 신입생을 생각하며 만들었지만, 학교가 궁금한 누구나 자유롭게 방문할 수 있는 공간입니다.</p>
+      <p>한 학기라는 짧은 시간 동안 만든 만큼, 아직 부족한 부분이 많습니다. 이용하다 보면 오류를 만나거나, 더 담겼으면 하는 장소와 필요한 기능이 떠오를 수도 있습니다. 앞으로 40기, 41기, 그리고 그 이후의 후배들이 이 프로젝트를 이어가며 부족한 부분을 채우고, 각자의 시선으로 학교의 모습을 더 잘 담아주기를 바랍니다. 시간이 흐르며 달라지는 학교의 모습도 이곳에 함께 남길 수 있다면 좋겠습니다.</p>
+      <p>새롭게 대구과학고등학교의 일원이 된 신입생 여러분, 입학을 진심으로 축하합니다. 이곳에서 미리 걸어본 길이 여러분의 첫 학교생활을 조금 더 편안하게 만들어주길 바랍니다. 그리고 우리 학교를 목표로 노력하고 있는 친구들에게는, 앞으로 만나게 될 공간을 둘러보는 시간이 설렘과 동기부여가 되었으면 합니다.</p>
+      <p>DSHS WORLD에 오신 여러분을 환영합니다!</p>
+      <p class="greeting-signature">38기 김동현 드림</p>
+    </div>
+  </dialog>
+
+  <dialog id="site-info-dialog" class="modal compact-modal" aria-labelledby="site-info-title">
+    <form method="dialog"><button class="modal-x" value="close" aria-label="닫기">×</button></form>
+    <span class="eyebrow">DSHS WORLD</span>
+    <h2 id="site-info-title">버전 / 방문자 수</h2>
+    <dl class="site-stats"><div><dt>버전</dt><dd id="site-version">2.9.1</dd></div><div><dt>누적 접속 횟수</dt><dd id="visit-count" aria-live="polite">불러오는 중…</dd></div></dl>
+  </dialog>
+
+  <dialog id="login-dialog" class="modal compact-modal">
+    <form id="login-form">
+      <button class="modal-x" type="button" data-close-dialog="login-dialog" aria-label="닫기">×</button>
+      <span class="eyebrow">ADMIN ACCESS</span>
+      <h2>편집 모드</h2>
+      <label>비밀번호<input id="admin-password" name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary-button" type="submit">로그인</button>
+      <p id="login-error" class="form-error" role="alert"></p>
+    </form>
+  </dialog>
+
+  <dialog id="upload-dialog" class="modal form-modal">
+    <form id="upload-form">
+      <button class="modal-x" type="button" data-close-dialog="upload-dialog" aria-label="닫기">×</button>
+      <span class="eyebrow">ADD PANORAMA NODE</span>
+      <h2>360° 사진 추가</h2><input name="replace" type="hidden" value="true"><button id="upload-new-node" class="secondary-button" type="button">새 노드로 추가</button><p>선택된 노드에 사진을 등록합니다. 기존 위치와 연결은 유지됩니다.</p>
+      <div class="form-grid">
+        <label class="span-2">사진 파일<input name="panorama" type="file" accept=".jpg,.jpeg,.png,.webp,.insp,image/jpeg,image/png,image/webp" required><small>JPG · PNG · WebP · INSP 원본 · 파일당 최대 48MB</small></label>
+        <p id="insp-hint" class="form-hint span-2" hidden>Insta360 X6의 듀얼 렌즈 INSP 원본을 이 브라우저에서 360° 파노라마로 자동 변환합니다. 변환이 끝날 때까지 이 창을 닫지 마세요.</p>
+        <label>노드 번호<input id="upload-id" name="id" readonly required><small>현재 선택된 노드 번호입니다.</small></label>
+        <label>표시 이름<input name="title" placeholder="본관 2층 동측 복도" maxlength="100" required></label>
+        <label>건물<select name="building"><option>본관</option><option>궁리관</option><option>거경관</option><option>야외</option></select></label><label>층<input name="floor" placeholder="2F" maxlength="12" required></label>
+        <label>노드 유형<select name="nodeType"><option value="hall">복도/일반</option><option value="entrance">현관</option><option value="stairs">계단</option><option value="elevator-landing">엘리베이터 승강장</option><option value="elevator-cab">엘리베이터 객실</option><option value="room">실내 공간</option></select></label>
+        <label>초기 Yaw<input name="initialYaw" type="number" min="-360" max="360" value="90"></label>
+        <label>초기 Pitch<input name="initialPitch" type="number" min="-85" max="85" value="0"></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-dialog="upload-dialog">취소</button><button class="primary-button" type="submit">업로드 및 변환</button></div>
+      <p class="form-hint">원본은 공개 경로와 분리해 보관합니다. 표시 가능한 파노라마는 웹용 8K·4K·썸네일이 자동 생성됩니다.</p>
+      <progress id="upload-progress" class="upload-progress" max="100" hidden aria-label="사진 전송 진행률"></progress>
+      <p id="upload-status" class="form-error" role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog id="connect-dialog" class="modal form-modal">
+    <form id="connect-form">
+      <button class="modal-x" type="button" data-close-dialog="connect-dialog" aria-label="닫기">×</button>
+      <span class="eyebrow">CONNECT NODES</span>
+      <h2>바닥 화살표 연결</h2>
+      <p class="modal-lead">도착 노드를 고른 뒤 파노라마에서 화살표를 놓을 위치를 클릭하세요.</p>
+      <div class="form-grid">
+        <label>출발 노드<input id="connect-from-label" readonly></label>
+        <input id="connect-from" name="fromScene" type="hidden">
+        <label>도착 노드<select id="connect-target" name="toScene" required></select></label>
+        <label>표시 문구<input name="label" placeholder="중앙 복도" maxlength="60" required></label>
+        <label>연결 유형<select name="kind"><option value="walk">일반 이동</option><option value="stairs">계단</option><option value="elevator">엘리베이터</option></select></label>
+        <input id="connect-yaw" name="yaw" type="hidden">
+        <input id="connect-pitch" name="pitch" type="hidden">
+        <label class="check-row span-2"><input name="reverse" type="checkbox" checked><span>반대 방향 연결도 함께 생성</span></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary-button" data-close-dialog="connect-dialog">취소</button><button id="connect-pick" class="primary-button" type="button">화살표 위치 선택</button><button id="connect-save" class="secondary-button" type="submit" disabled>연결 저장</button></div>
+    </form>
+  </dialog>
+  <div id="arrow-placement" class="arrow-placement" hidden role="status"><span id="arrow-placement-status">화살표를 놓을 바닥을 클릭하세요</span><button id="arrow-placement-cancel" type="button">취소</button><button id="arrow-placement-save" type="button" disabled>연결 저장</button></div>
+
+  <dialog id="edit-dialog" class="modal form-modal">
+    <form id="edit-form">
+      <button class="modal-x" type="button" data-close-dialog="edit-dialog" aria-label="닫기">×</button>
+      <span class="eyebrow">EDIT CURRENT NODE</span>
+      <h2>현재 노드 설정</h2>
+      <div class="form-grid">
+        <label class="span-2">노드 ID<input id="edit-id" readonly></label>
+        <label>표시 이름<input id="edit-title" name="title" maxlength="100" required></label>
+        <label>건물<select id="edit-building" name="building"><option>본관</option><option>궁리관</option><option>거경관</option><option>야외</option></select></label><label>층<input id="edit-floor" name="floor" maxlength="12" required></label>
+        <label>노드 유형<select id="edit-node-type" name="nodeType"><option value="hall">복도/일반</option><option value="entrance">현관</option><option value="stairs">계단</option><option value="elevator-landing">엘리베이터 승강장</option><option value="elevator-cab">엘리베이터 객실</option><option value="room">실내 공간</option></select></label>
+        <p class="form-hint span-2">사진 방향 보정 · 화살표도 사진 속 같은 지점에 붙어 함께 회전합니다.</p>
+        <label>사진 Yaw<input id="edit-image-yaw" name="imageYaw" type="number" min="-360" max="360" step="0.1" value="0" required></label>
+        <label>사진 Pitch<input id="edit-image-pitch" name="imagePitch" type="number" min="-90" max="90" step="0.1" value="0" required></label>
+        <label class="check-row span-2"><input id="use-current-view" type="checkbox"><span>현재 시선을 시작 방향으로 저장</span></label>
+      </div>
+      <div class="modal-actions split-actions"><button id="delete-scene" type="button" class="danger-button">노드 삭제</button><span></span><button id="set-start-scene" type="button" class="secondary-button">첫 화면 지정</button><button class="primary-button" type="submit">변경 저장</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="links-dialog" class="modal form-modal">
+    <div>
+      <button class="modal-x" type="button" data-close-dialog="links-dialog" aria-label="닫기">×</button>
+      <span class="eyebrow">LINK MANAGER</span>
+      <h2>현재 노드의 연결</h2>
+      <div id="link-manager-list" class="link-manager-list"></div>
+    </div>
+  </dialog>
+
+  <dialog id="node-graph-dialog" class="modal graph-modal">
+    <div class="graph-shell">
+      <button class="modal-x" type="button" data-close-dialog="node-graph-dialog" aria-label="닫기">×</button>
+      <span class="eyebrow">NODE GRAPH</span>
+      <div class="graph-heading">
+        <div><h2>노드 맵</h2><p id="graph-description">저장된 연결이 자동 반영됩니다 · 노드를 클릭하면 해당 위치로 이동</p></div>
+        <div class="graph-tools">
+          <label>건물<select id="graph-building"><option>본관</option><option>궁리관</option><option>거경관</option><option>야외</option></select></label>
+          <button id="graph-mark-mode" class="secondary-button" type="button" aria-pressed="false" hidden>위치 확인 표시</button>
+        </div>
+      </div>
+      <p class="plan-legend">● 촬영 위치　<span>● 엘리베이터</span>　<span>● 계단 앞</span>　<span class="confirmed-legend">● 위치 확인</span></p>
+      <p id="graph-mark-status" class="graph-mark-status" role="status" aria-live="polite"></p>
+      <div id="node-graph-stage" class="node-graph-stage">
+        <div id="node-graph-canvas" class="node-graph-canvas"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/intro-sound.js?v=2.9.1" defer></script>
+  <script src="/opening-motion.js?v=2.9.1" defer></script>
+  <script src="/opening.js?v=2.9.1" defer></script>
+  <script src="/viewer.js?v=2.9.1" defer></script>
+  <script src="/upload.js?v=2.9.1" defer></script>
+  <script src="/arrow-editor.js?v=2.9.1" defer></script>
+  <script src="/app.js?v=2.9.1" defer></script>
+</body>
+</html>

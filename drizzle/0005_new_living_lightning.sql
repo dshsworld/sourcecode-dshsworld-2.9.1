@@ -1,0 +1,1 @@
+ALTER TABLE `scenes` ADD `location_confirmed` integer DEFAULT 0 NOT NULL;
